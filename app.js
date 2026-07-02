@@ -64,6 +64,7 @@ function initApp() {
   registerServiceWorker();
   updateUI();
   setupEventListeners();
+  setupPWAInstallPrompt();
 }
 
 function saveToStorage() {
@@ -324,6 +325,75 @@ function setupEventListeners() {
     state.transactions = state.transactions.filter(tx => tx.id !== id);
     saveToStorage();
     updateUI();
+  });
+}
+
+// 8. Prompt de Instalação Customizado (PWA)
+let deferredPrompt = null;
+
+function setupPWAInstallPrompt() {
+  const banner = document.getElementById('pwa-install-banner');
+  const installBtn = document.getElementById('btn-pwa-install');
+  const closeBtn = document.getElementById('btn-close-install-banner');
+  const installText = document.getElementById('pwa-install-text');
+
+  // Verifica se o usuário já dispensou o banner anteriormente
+  const isDismissed = localStorage.getItem('fin_install_dismissed') === 'true';
+  // Verifica se o app já está rodando em modo "standalone" (aplicativo instalado)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  if (isStandalone) {
+    // Se já está instalado, garante que o banner esteja oculto
+    return;
+  }
+
+  // 1. Caso seja iOS (iPhone/iPad) no Safari: mostramos instrução personalizada
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+  if (isIOS && !isDismissed) {
+    // Customizar texto do banner para iOS
+    installText.innerHTML = 'Para instalar no seu iPhone, toque no ícone de <strong class="text-emerald-400">Compartilhar</strong> e selecione <strong class="text-emerald-400">"Adicionar à Tela de Início"</strong>.';
+    // Ocultar o botão padrão de instalar
+    installBtn.classList.add('hidden');
+    // Mostrar o banner
+    banner.classList.remove('hidden');
+  }
+
+  // 2. Ouvir evento para dispositivos Android/Chrome
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Impede o prompt nativo padrão do Chrome
+    e.preventDefault();
+    // Salva o evento para ser disparado posteriormente
+    deferredPrompt = e;
+
+    // Se o usuário não tiver dispensado o banner, exibe-o
+    if (!isDismissed) {
+      banner.classList.remove('hidden');
+    }
+  });
+
+  // Ação de clicar no botão "Instalar Agora" (para Chrome/Android)
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+
+    // Exibe o prompt nativo de instalação
+    deferredPrompt.prompt();
+
+    // Aguarda a resposta do usuário
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Escolha de instalação do usuário: ${outcome}`);
+
+    // Limpa a variável do evento, pois o prompt só pode ser usado uma vez
+    deferredPrompt = null;
+    // Oculta o banner
+    banner.classList.add('hidden');
+  });
+
+  // Ação de fechar/dispensar o banner
+  closeBtn.addEventListener('click', () => {
+    banner.classList.add('hidden');
+    // Salva no localStorage para não perturbar o usuário novamente
+    localStorage.setItem('fin_install_dismissed', 'true');
   });
 }
 
