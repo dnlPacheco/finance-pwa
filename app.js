@@ -349,28 +349,38 @@ function setupEventListeners() {
   });
 
   // Alternar Visibilidade de Dados Sensíveis
-  document.getElementById('btn-toggle-visibility').addEventListener('click', () => {
-    state.showValues = !state.showValues;
-    saveToStorage();
-    updateUI();
-  });
+  const toggleVisibilityBtn = document.getElementById('btn-toggle-visibility');
+  if (toggleVisibilityBtn) {
+    toggleVisibilityBtn.addEventListener('click', () => {
+      state.showValues = !state.showValues;
+      console.log('Visibilidade alternada. Exibir valores:', state.showValues);
+      saveToStorage();
+      updateUI();
+    });
+  }
+
 
   // Eventos do Modal Informativo (Metodologia 50/30/20)
   const infoDialog = document.getElementById('info-dialog');
-  document.getElementById('btn-open-info').addEventListener('click', () => {
-    infoDialog.showModal();
-  });
-  document.getElementById('btn-close-info').addEventListener('click', () => {
-    infoDialog.close();
-  });
-  infoDialog.addEventListener('click', (e) => {
-    const rect = infoDialog.getBoundingClientRect();
-    const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
-      rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
-    if (!isInDialog) {
+  const openInfoBtn = document.getElementById('btn-open-info');
+  const closeInfoBtn = document.getElementById('btn-close-info');
+  
+  if (infoDialog && openInfoBtn && closeInfoBtn) {
+    openInfoBtn.addEventListener('click', () => {
+      infoDialog.showModal();
+    });
+    closeInfoBtn.addEventListener('click', () => {
       infoDialog.close();
-    }
-  });
+    });
+    infoDialog.addEventListener('click', (e) => {
+      const rect = infoDialog.getBoundingClientRect();
+      const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+      if (!isInDialog) {
+        infoDialog.close();
+      }
+    });
+  }
 }
 
 // 8. Prompt de Instalação Customizado (PWA)
