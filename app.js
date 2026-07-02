@@ -347,7 +347,7 @@ function setupPWAInstallPrompt() {
     return;
   }
 
-  // 1. Caso seja iOS (iPhone/iPad) no Safari: mostramos instrução personalizada
+  // 1. Caso seja iOS (iPhone/iPad) no Safari: mostramos instrução personalizada imediata
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   
   if (isIOS && !isDismissed) {
@@ -359,18 +359,30 @@ function setupPWAInstallPrompt() {
     banner.classList.remove('hidden');
   }
 
-  // 2. Ouvir evento para dispositivos Android/Chrome
+  // 2. Ouvir evento para dispositivos Android/Chrome/Chromium (Opera Mobile/Brave)
   window.addEventListener('beforeinstallprompt', (e) => {
     // Impede o prompt nativo padrão do Chrome
     e.preventDefault();
     // Salva o evento para ser disparado posteriormente
     deferredPrompt = e;
 
-    // Se o usuário não tiver dispensado o banner, exibe-o
+    // Se o usuário não tiver dispensado o banner, exibe-o com o botão de instalação de 1 clique
     if (!isDismissed) {
+      installText.textContent = 'Adicione o app à sua tela de início para acessar rapidamente e de forma offline.';
+      installBtn.classList.remove('hidden');
       banner.classList.remove('hidden');
     }
   });
+
+  // 3. Fallback para outros navegadores (Firefox, Opera Desktop, etc. que não possuem prompt dinâmico)
+  // Aguarda 3 segundos. Se beforeinstallprompt não disparar, exibe instruções genéricas
+  setTimeout(() => {
+    if (!deferredPrompt && !isIOS && !isStandalone && !isDismissed) {
+      installText.innerHTML = 'Adicione este app à sua tela inicial! Abra o menu do seu navegador (três pontinhos ou linhas) e selecione <strong class="text-emerald-400">"Adicionar à Tela Inicial"</strong> ou <strong class="text-emerald-400">"Instalar"</strong>.';
+      installBtn.classList.add('hidden');
+      banner.classList.remove('hidden');
+    }
+  }, 3000);
 
   // Ação de clicar no botão "Instalar Agora" (para Chrome/Android)
   installBtn.addEventListener('click', async () => {
