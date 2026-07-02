@@ -43,22 +43,26 @@ const SAMPLE_TRANSACTIONS = [
 // 2. Estado Global da Aplicação
 let state = {
   income: SAMPLE_INCOME,
-  transactions: []
+  transactions: [],
+  showValues: true
 };
 
 // 3. Inicialização e Persistência
 function initApp() {
   const storedIncome = localStorage.getItem('fin_income');
   const storedTransactions = localStorage.getItem('fin_transactions');
+  const storedShowValues = localStorage.getItem('fin_show_values');
 
   if (storedIncome === null || storedTransactions === null) {
     // Primeiro acesso: inicializa com dados de exemplo
     state.income = SAMPLE_INCOME;
     state.transactions = SAMPLE_TRANSACTIONS;
+    state.showValues = true;
     saveToStorage();
   } else {
     state.income = parseFloat(storedIncome) || SAMPLE_INCOME;
     state.transactions = JSON.parse(storedTransactions) || [];
+    state.showValues = storedShowValues !== 'false';
   }
 
   registerServiceWorker();
@@ -70,6 +74,7 @@ function initApp() {
 function saveToStorage() {
   localStorage.setItem('fin_income', state.income.toString());
   localStorage.setItem('fin_transactions', JSON.stringify(state.transactions));
+  localStorage.setItem('fin_show_values', state.showValues.toString());
 }
 
 // 4. Registro do Service Worker para suporte PWA
@@ -118,8 +123,24 @@ function getFinancialCalculations() {
 function updateUI() {
   const calc = getFinancialCalculations();
 
-  // Formatação de valores
-  const formatCurrency = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  // Formatação de valores (com suporte a ocultação)
+  const formatCurrency = (val) => {
+    if (!state.showValues) return 'R$ ••••';
+    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Atualizar ícones de exibição do olho
+  const eyeOpenIcon = document.getElementById('icon-eye-open');
+  const eyeClosedIcon = document.getElementById('icon-eye-closed');
+  if (eyeOpenIcon && eyeClosedIcon) {
+    if (state.showValues) {
+      eyeOpenIcon.classList.remove('hidden');
+      eyeClosedIcon.classList.add('hidden');
+    } else {
+      eyeOpenIcon.classList.add('hidden');
+      eyeClosedIcon.classList.remove('hidden');
+    }
+  }
 
   // Dashboard - Saldo Disponível
   const balanceEl = document.getElementById('dashboard-balance');
@@ -325,6 +346,30 @@ function setupEventListeners() {
     state.transactions = state.transactions.filter(tx => tx.id !== id);
     saveToStorage();
     updateUI();
+  });
+
+  // Alternar Visibilidade de Dados Sensíveis
+  document.getElementById('btn-toggle-visibility').addEventListener('click', () => {
+    state.showValues = !state.showValues;
+    saveToStorage();
+    updateUI();
+  });
+
+  // Eventos do Modal Informativo (Metodologia 50/30/20)
+  const infoDialog = document.getElementById('info-dialog');
+  document.getElementById('btn-open-info').addEventListener('click', () => {
+    infoDialog.showModal();
+  });
+  document.getElementById('btn-close-info').addEventListener('click', () => {
+    infoDialog.close();
+  });
+  infoDialog.addEventListener('click', (e) => {
+    const rect = infoDialog.getBoundingClientRect();
+    const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+      rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+    if (!isInDialog) {
+      infoDialog.close();
+    }
   });
 }
 
